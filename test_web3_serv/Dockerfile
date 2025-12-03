@@ -17,7 +17,21 @@ RUN pnpm install
 COPY . .
 
 # Використовуємо xcopy для Windows (для копіювання файлів у Windows)
-RUN xcopy src\\generated dist\\generated /E /I /Y
+# Умовно використовуємо команду для копіювання файлів на Windows чи Linux
+RUN if [ "$(uname)" == "Darwin" ] || [ "$(uname)" == "Linux" ]; then \
+    cp -r src/generated dist/generated; \
+  elif [ "$(uname -s)" == "MINGW64_NT"* ] || [ "$(uname -s)" == "MSYS_NT"* ]; then \
+    xcopy src\\generated dist\\generated /E /I /Y; \
+  fi
+
+# Створення бінарного файлу для проекту
+RUN pnpm run build
+
+# Відкриваємо порт 4000
+EXPOSE 4000
+
+# Команда для запуску NestJS (продуктивна версія)
+CMD ["pnpm", "run", "start:prod"]
 
 # Створення бінарного файлу для проекту
 RUN pnpm run build
