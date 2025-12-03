@@ -75,6 +75,7 @@ jobs:
         run: |
           Write-Host "📦 Build Docker образу..."
           docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest backend/
+
           Write-Host "🚀 Push Docker образу в ECR..."
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
 
