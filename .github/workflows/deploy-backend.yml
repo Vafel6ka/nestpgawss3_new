@@ -8,7 +8,7 @@ on:
 env:
   # Назва Docker образу у ECR
   ECR_IMAGE: ${{ secrets.ECR_IMAGE }}
-  # Регіон AWS (коректно підставляється значення з Repository variables)
+  # Регіон AWS (перевіряємо, що значення передається правильно)
   AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }} # Використовуємо секрет для коректної підстановки
 
 jobs:
