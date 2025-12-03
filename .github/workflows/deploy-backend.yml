@@ -68,7 +68,7 @@ jobs:
           docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com
 
       # -------------------------------
-      # 7️⃣ Build та пуш Docker образу
+      # 7️⃣ Build та пуш Docker образу !
       # -------------------------------
       - name: Build and push Docker image
         shell: pwsh
