@@ -7,9 +7,9 @@ on:
 
 env:
   # Назва Docker образу у ECR
-  ECR_IMAGE: ${{ vars.ECR_IMAGE }}
-  # Регіон AWS
-  AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+  ECR_IMAGE: ${{ secrets.ECR_IMAGE }}
+  # Регіон AWS (коректно підставляється значення з Repository variables)
+  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }} # Використовуємо секрет для коректної підстановки
 
 jobs:
   deploy:
@@ -21,9 +21,6 @@ jobs:
       # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
-        # якщо приватний репо - розкоментуй:
-        # with:
-        #   token: ${{ secrets.GITHUB_TOKEN }}
 
       # -------------------------------
       # 2️⃣ Налаштовуємо AWS credentials
@@ -33,7 +30,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }} # Переконатися, що значення передається правильно
 
       # -------------------------------
       # 3️⃣ Дебаг для логіну в ECR
@@ -41,13 +38,13 @@ jobs:
       - name: Debug ECR login
         run: |
           # Виведення регіону AWS
-          echo "Logging into AWS ECR with region: $env.AWS_DEFAULT_REGION"
+          echo "Logging into AWS ECR with region: ${{ secrets.AWS_DEFAULT_REGION }}"
 
           # Логування пароля для дебагу (вивести тільки для перевірки, не рекомендується на продакшн)
-          echo "Using AWS ECR login URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env.AWS_DEFAULT_REGION.amazonaws.com"
+          echo "Using AWS ECR login URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com"
 
           # Логін до ECR
-          echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env.AWS_DEFAULT_REGION.amazonaws.com
+          echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
 
       # -------------------------------
       # 4️⃣ Логін в Amazon ECR
@@ -56,8 +53,8 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "🔑 Логін в ECR..."
-          $password = aws ecr get-login-password --region $env:AWS_DEFAULT_REGION
-          docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env.AWS_DEFAULT_REGION.amazonaws.com
+          $password = aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }}
+          docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
 
       # -------------------------------
       # 5️⃣ Build та пуш Docker образу !
@@ -66,10 +63,10 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "📦 Build Docker образу..."
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env.AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
 
           Write-Host "🚀 Push Docker образу в ECR..."
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env.AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/$ECR_IMAGE:latest
 
       # -------------------------------
       # 6️⃣ Деплой на ECS (force new deployment)!
@@ -85,4 +82,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ env.AWS_DEFAULT_REGION }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
