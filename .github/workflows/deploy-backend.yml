@@ -86,7 +86,7 @@ jobs:
           #   --push backend/
 
       # -------------------------------
-      # 8️⃣ Деплой на ECS (force new deployment)
+      # 8️⃣ Деплой на ECS (force new deployment)!
       # -------------------------------
       - name: Deploy to ECS
         shell: pwsh
