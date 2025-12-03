@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  binaryTargets   = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  // url      = env("DATABASE_URL") // dummy for VSCode, Prisma v7 ignores Працює 7 прізма і без цього але еррор так не підсвічує
+}
+
+model User {
+  id Int @default(autoincrement()) @id
+  username String @unique
+  displayName String? @default("")
+  userSetting UserSetting?
+  posts Post[] //one to many relat
+  groupPosts UserOnGroupPosts[]
+}
+
+model GroupPost {
+  id Int @default(autoincrement()) @id
+  title String
+  description String
+  users UserOnGroupPosts[]
+}
+
+model UserOnGroupPosts {
+  user User @relation(fields: [userId], references: [id])
+  userId Int
+  groupPost GroupPost @relation(fields: [groupPostId], references: [id]) //userId from this table and id from userTable
+  groupPostId Int
+  @@id([userId, groupPostId])
+}
+
+model UserSetting {
+  id Int @default(autoincrement()) @id
+  notificationsOn Boolean
+  smsEnabled Boolean
+  user User @relation(fields: [userId], references: [id])
+  userId Int @unique
+}
+
+model Post {
+  id Int @default(autoincrement()) @id
+  title String
+  description String
+  user User @relation(fields: [userId], references: [id])
+  userId Int
+}

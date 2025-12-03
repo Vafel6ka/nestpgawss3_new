@@ -1,0 +1,51 @@
+# ==========================
+# Compiled output / build
+# ==========================
+**/dist/
+**/node_modules/
+**/src/generated/
+
+# ==========================
+# Logs
+# ==========================
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ==========================
+# OS files
+# ==========================
+.DS_Store
+
+# ==========================
+# AWS serv files
+# ==========================
+*.rdp
+
+# ==========================
+# Test coverage
+# ==========================
+/coverage
+/.nyc_output
+
+# ==========================
+# IDEs and Editors
+# ==========================
+/.idea/
+/.project
+/.classpath
+/.c9/
+*.launch
+/.settings/
+*.sublime-workspace
+
+# VSCode specific
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json

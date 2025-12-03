@@ -1,0 +1,102 @@
+name: Build and Deploy BackendApp to ECS
+
+on:
+  push:
+    branches:
+      - main # <-- Основна гілка для деплою
+
+env:
+  # Назва Docker образу у ECR
+  ECR_IMAGE: ${{ vars.ECR_IMAGE }}
+  # Регіон AWS
+  AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+
+jobs:
+  deploy:
+    runs-on: windows-latest # <- Windows runner
+
+    steps:
+      # -------------------------------
+      # 1️⃣ Клонуємо репозиторій
+      # -------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        # якщо приватний репо - розкоментуй:
+        # with:
+        #   token: ${{ secrets.GITHUB_TOKEN }}
+
+      # -------------------------------
+      # 2️⃣ Налаштовуємо QEMU для підтримки ARM64 (Linux only)
+      # -------------------------------
+      # - name: Set up QEMU for arm64
+      #   if: runner.os == 'Linux'
+      #   run: |
+      #     docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+      # -------------------------------
+      # 3️⃣ Налаштовуємо Docker для ARM64 (Linux only)
+      # -------------------------------
+      # - name: Set up Docker for arm64
+      #   uses: docker/setup-qemu-action@v2
+      #   with:
+      #     platforms: linux/arm64
+
+      # -------------------------------
+      # 4️⃣ Налаштовуємо Docker Buildx (Linux only)
+      # -------------------------------
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
+
+      # -------------------------------
+      # 5️⃣ Налаштовуємо AWS credentials
+      # -------------------------------
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      # -------------------------------
+      # 6️⃣ Логін до Amazon ECR
+      # -------------------------------
+      - name: Login to Amazon ECR
+        shell: pwsh
+        run: |
+          Write-Host "🔑 Логін в ECR..."
+          $password = aws ecr get-login-password --region $env:AWS_DEFAULT_REGION
+          docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com
+
+      # -------------------------------
+      # 7️⃣ Build та пуш Docker образу
+      # -------------------------------
+      - name: Build and push Docker image
+        shell: pwsh
+        run: |
+          Write-Host "📦 Build Docker образу..."
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest backend/
+          Write-Host "🚀 Push Docker образу в ECR..."
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
+
+          # Linux only мультиплатформовий build (залишено закоментованим)
+          # docker buildx create --use
+          # docker buildx inspect --bootstrap
+          # docker buildx build --platform linux/arm64 \
+          #   -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest \
+          #   --push backend/
+
+      # -------------------------------
+      # 8️⃣ Деплой на ECS (force new deployment)
+      # -------------------------------
+      - name: Deploy to ECS
+        shell: pwsh
+        run: |
+          Write-Host "🚀 Деплой на ECS..."
+          aws ecs update-service `
+            --cluster MpcsjNestJSStabilityIntegration `
+            --service MpcsjStabilityAPI `
+            --force-new-deployment
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ env.AWS_DEFAULT_REGION }}
