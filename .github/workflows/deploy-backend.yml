@@ -7,7 +7,7 @@ on:
 
 env:
   # Назва Docker образу у ECR
-  ECR_IMAGE: stablemywebserv
+  ECR_IMAGE: ${{ vars.ECR_IMAGE }}
   # Регіон AWS
   AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
 
