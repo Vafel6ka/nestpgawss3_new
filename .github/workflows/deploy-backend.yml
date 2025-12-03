@@ -23,7 +23,15 @@ jobs:
         uses: actions/checkout@v3
 
       # -------------------------------
-      # 2️⃣ Налаштовуємо AWS credentials
+      # 2️⃣ Дебаг для перевірки значень змінних середовища
+      # -------------------------------
+      - name: Debug AWS region and account
+        run: |
+          echo "AWS region is: ${{ secrets.AWS_DEFAULT_REGION }}"
+          echo "AWS Account ID: ${{ secrets.AWS_ACCOUNT_ID }}"
+
+      # -------------------------------
+      # 3️⃣ Налаштовуємо AWS credentials
       # -------------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -33,7 +41,7 @@ jobs:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }} # Переконатися, що значення передається правильно
 
       # -------------------------------
-      # 3️⃣ Дебаг для логіну в ECR
+      # 4️⃣ Дебаг для логіну в ECR
       # -------------------------------
       - name: Debug ECR login
         run: |
@@ -47,7 +55,7 @@ jobs:
           echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
 
       # -------------------------------
-      # 4️⃣ Логін в Amazon ECR
+      # 5️⃣ Логін в Amazon ECR
       # -------------------------------
       - name: Login to Amazon ECR
         shell: pwsh
@@ -57,7 +65,7 @@ jobs:
           docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
 
       # -------------------------------
-      # 5️⃣ Build та пуш Docker образу !
+      # 6️⃣ Build та пуш Docker образу !
       # -------------------------------
       - name: Build and push Docker image
         shell: pwsh
@@ -69,7 +77,7 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/$ECR_IMAGE:latest
 
       # -------------------------------
-      # 6️⃣ Деплой на ECS (force new deployment)!
+      # 7️⃣ Деплой на ECS (force new deployment)!
       # -------------------------------
       - name: Deploy to ECS
         shell: pwsh
