@@ -74,7 +74,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "📦 Build Docker образу..."
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest backend/
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
 
           Write-Host "🚀 Push Docker образу в ECR..."
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$env:AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
@@ -84,7 +84,7 @@ jobs:
           # docker buildx inspect --bootstrap
           # docker buildx build --platform linux/arm64 \
           #   -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest \
-          #   --push backend/
+          #   --push test_web3_serv/
 
       # -------------------------------
       # 8️⃣ Деплой на ECS (force new deployment)!
