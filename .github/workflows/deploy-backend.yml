@@ -3,46 +3,80 @@ name: Build and Deploy BackendApp to ECS
 on:
   push:
     branches:
-      - main
+      - main # <-- Основна гілка для деплою
 
 env:
-  ECR_IMAGE: ${{ secrets.ECR_IMAGE }}
-  AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  # Назва Docker образу у ECR (це змінна середовища, не секрет!)
+  ECR_IMAGE: stablemywebserv # або якщо значення з варіаблі:
+  # ECR_IMAGE: ${{ vars.ECR_IMAGE }}
+
+  # Регіон AWS (також не секрет, а змінна середовища)
+  AWS_DEFAULT_REGION: us-east-1 # або динамічно через варіаблі:
+  # AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
 
 jobs:
   deploy:
-    runs-on: windows-latest
+    runs-on: windows-latest # <- Windows runner
 
     steps:
+      # -------------------------------
+      # 1️⃣ Клонуємо репозиторій
+      # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # -------------------------------
+      # 2️⃣ Дебаг для перевірки значень змінних середовища
+      # -------------------------------
       - name: Debug AWS region and account
         run: |
-          echo "AWS region is: ${{ secrets.AWS_DEFAULT_REGION }}"
+          echo "AWS region is: $AWS_DEFAULT_REGION" # Використовуємо змінну середовища без `secrets`
           echo "AWS Account ID: ${{ secrets.AWS_ACCOUNT_ID }}"
+          echo "ECR Image name: $ECR_IMAGE"  # Виводимо значення змінної ECR_IMAGE
 
+      # -------------------------------
+      # 3️⃣ Налаштовуємо AWS credentials
+      # -------------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: $AWS_DEFAULT_REGION # Передаємо через змінну середовища
 
+      # -------------------------------
+      # 4️⃣ Дебаг для логіну в ECR
+      # -------------------------------
       - name: Debug ECR login
         run: |
-          echo "Logging into AWS ECR with region: ${{ secrets.AWS_DEFAULT_REGION }}"
-          echo "Using AWS ECR login URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com"
-          echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
+          echo "Logging into AWS ECR with region: $AWS_DEFAULT_REGION"
+          echo "Using AWS ECR login URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+          echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
+      # -------------------------------
+      # 5️⃣ Логін в Amazon ECR
+      # -------------------------------
+      - name: Login to Amazon ECR
+        shell: pwsh
+        run: |
+          Write-Host "🔑 Логін в ECR..."
+          $password = aws ecr get-login-password --region $AWS_DEFAULT_REGION
+          docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+
+      # -------------------------------
+      # 6️⃣ Build та пуш Docker образу!
+      # -------------------------------
       - name: Build and push Docker image
         shell: pwsh
         run: |
           Write-Host "📦 Build Docker образу..."
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
           Write-Host "🚀 Push Docker образу в ECR..."
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/$ECR_IMAGE:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
 
+      # -------------------------------
+      # 7️⃣ Деплой на ECS
+      # -------------------------------
       - name: Deploy to ECS
         shell: pwsh
         run: |
@@ -54,4 +88,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
