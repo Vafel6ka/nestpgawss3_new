@@ -3,85 +3,46 @@ name: Build and Deploy BackendApp to ECS
 on:
   push:
     branches:
-      - main # <-- Основна гілка для деплою
+      - main
 
 jobs:
   deploy:
-    runs-on: windows-latest # <- Windows runner
+    runs-on: macos-latest # Використовуємо macOS runner
 
     env:
-      # Оголошуємо змінні середовища на рівні job
-      ECR_IMAGE: ${{ vars.ECR_IMAGE }} # stablemywebserv
-      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }} # або ${{ vars.AWS_DEFAULT_REGION }}
+      ECR_IMAGE: stablemywebserv
+      AWS_DEFAULT_REGION: us-east-1
 
     steps:
-      # -------------------------------
-      # 1️⃣ Клонуємо репозиторій
-      # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # -------------------------------
-      # 2️⃣ Дебаг для перевірки значень змінних середовища
-      # -------------------------------
       - name: Debug AWS region and account
         run: |
-          echo "AWS region is: $AWS_DEFAULT_REGION" # Використовуємо змінну середовища без `secrets`
+          echo "AWS region is: $AWS_DEFAULT_REGION"
+          echo "ECR Image name: $ECR_IMAGE"
           echo "AWS Account ID: ${{ secrets.AWS_ACCOUNT_ID }}"
-          echo "ECR Image name: $ECR_IMAGE"  # Виводимо значення змінної ECR_IMAGE
 
-      # -------------------------------
-      # 3️⃣ Налаштовуємо AWS credentials
-      # -------------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: $AWS_DEFAULT_REGION # Передаємо через змінну середовища
+          aws-region: $AWS_DEFAULT_REGION
 
-      # -------------------------------
-      # 4️⃣ Дебаг для логіну в ECR
-      # -------------------------------
-      - name: Debug ECR login
-        run: |
-          echo "Logging into AWS ECR with region: $AWS_DEFAULT_REGION"
-          echo "Using AWS ECR login URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
-          echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-
-      # -------------------------------
-      # 5️⃣ Логін в Amazon ECR
-      # -------------------------------
-      - name: Login to Amazon ECR
-        shell: pwsh
-        run: |
-          Write-Host "🔑 Логін в ECR..."
-          $password = aws ecr get-login-password --region $AWS_DEFAULT_REGION
-          docker login --username AWS --password $password ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-
-      # -------------------------------
-      # 6️⃣ Build та пуш Docker образу!
-      # -------------------------------
       - name: Build and push Docker image
-        shell: pwsh
+        shell: bash
         run: |
-          Write-Host "📦 Build Docker образу..."
+          echo "Building Docker image..."
           docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
-          Write-Host "🚀 Push Docker образу в ECR..."
+          echo "Pushing Docker image..."
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
 
-      # -------------------------------
-      # 7️⃣ Деплой на ECS
-      # -------------------------------
       - name: Deploy to ECS
-        shell: pwsh
         run: |
-          Write-Host "🚀 Деплой на ECS..."
-          aws ecs update-service `
-            --cluster MpcsjNestJSStabilityIntegration `
-            --service MpcsjStabilityAPI `
-            --force-new-deployment
+          echo "Deploying to ECS..."
+          aws ecs update-service --cluster MpcsjNestJSStabilityIntegration --service MpcsjStabilityAPI --force-new-deployment
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION # Передаємо через змінну середовища
+          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
