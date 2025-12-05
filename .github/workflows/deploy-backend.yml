@@ -3,46 +3,74 @@ name: Build and Deploy BackendApp to ECS
 on:
   push:
     branches:
-      - main
+      - main # <-- Основна гілка для деплою
 
 jobs:
   deploy:
     runs-on: macos-latest # Використовуємо macOS runner
 
-    env:
-      ECR_IMAGE: stablemywebserv
-      AWS_DEFAULT_REGION: us-east-1
-
     steps:
+      # -------------------------------
+      # 1️⃣ Клонуємо репозиторій
+      # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # -------------------------------
+      # 2️⃣ Дебаг для перевірки значень змінних середовища
+      # -------------------------------
       - name: Debug AWS region and account
         run: |
-          echo "AWS region is: $AWS_DEFAULT_REGION"
-          echo "ECR Image name: $ECR_IMAGE"
+          echo "AWS region is: ${{ vars.AWS_DEFAULT_REGION }}"
+          echo "ECR Image name: ${{ vars.ECR_IMAGE }}"
           echo "AWS Account ID: ${{ secrets.AWS_ACCOUNT_ID }}"
 
+      # -------------------------------
+      # 3️⃣ Налаштовуємо AWS credentials
+      # -------------------------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: $AWS_DEFAULT_REGION
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }} # Передаємо регіон через варіабл
 
-      - name: Build and push Docker image
-        shell: bash
+      # -------------------------------
+      # 4️⃣ Дебаг для логіну в ECR
+      # -------------------------------
+      - name: Debug ECR login
         run: |
-          echo "Building Docker image..."
-          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest test_web3_serv/
-          echo "Pushing Docker image..."
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest
+          echo "Logging into AWS ECR with region: ${{ vars.AWS_DEFAULT_REGION }}"
+          echo "Using AWS ECR login URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_DEFAULT_REGION }}.amazonaws.com"
+          docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_DEFAULT_REGION }}.amazonaws.com
 
+      # -------------------------------
+      # 5️⃣ Логін в Amazon ECR
+      # -------------------------------
+      - name: Login to Amazon ECR
+        run: |
+          echo "🔑 Logging into ECR..."
+          password=$(aws ecr get-login-password --region ${{ vars.AWS_DEFAULT_REGION }})
+          echo $password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_DEFAULT_REGION }}.amazonaws.com
+
+      # -------------------------------
+      # 6️⃣ Build та пуш Docker образу
+      # -------------------------------
+      - name: Build and push Docker image
+        run: |
+          echo "📦 Building Docker image..."
+          docker build -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_DEFAULT_REGION }}.amazonaws.com/${{ vars.ECR_IMAGE }}:latest test_web3_serv/
+          echo "🚀 Pushing Docker image..."
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_DEFAULT_REGION }}.amazonaws.com/${{ vars.ECR_IMAGE }}:latest
+
+      # -------------------------------
+      # 7️⃣ Деплой на ECS
+      # -------------------------------
       - name: Deploy to ECS
         run: |
-          echo "Deploying to ECS..."
+          echo "🚀 Deploying to ECS..."
           aws ecs update-service --cluster MpcsjNestJSStabilityIntegration --service MpcsjStabilityAPI --force-new-deployment
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
