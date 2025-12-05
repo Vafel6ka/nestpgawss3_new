@@ -5,18 +5,14 @@ on:
     branches:
       - main # <-- Основна гілка для деплою
 
-env:
-  # Назва Docker образу у ECR (це змінна середовища, не секрет!)
-  ECR_IMAGE: stablemywebserv # або якщо значення з варіаблі:
-  # ECR_IMAGE: ${{ vars.ECR_IMAGE }}
-
-  # Регіон AWS (також не секрет, а змінна середовища)
-  AWS_DEFAULT_REGION: us-east-1 # або динамічно через варіаблі:
-  # AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
-
 jobs:
   deploy:
     runs-on: windows-latest # <- Windows runner
+
+    env:
+      # Оголошуємо змінні середовища на рівні job
+      ECR_IMAGE: ${{ vars.ECR_IMAGE }} # stablemywebserv
+      AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }} # або ${{ vars.AWS_DEFAULT_REGION }}
 
     steps:
       # -------------------------------
@@ -88,4 +84,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+          AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION # Передаємо через змінну середовища
